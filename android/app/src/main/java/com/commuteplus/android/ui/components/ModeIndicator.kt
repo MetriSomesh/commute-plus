@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -43,8 +44,8 @@ fun modeIcon(mode: String): ImageVector {
         "AUTO" -> Icons.Filled.ElectricRickshaw
         "BIKE_TAXI" -> Icons.Filled.TwoWheeler
         "CAB" -> Icons.Filled.LocalTaxi
-        "WALK" -> Icons.Filled.DirectionsWalk
-        else -> Icons.Filled.DirectionsWalk
+        "WALK" -> Icons.AutoMirrored.Filled.DirectionsWalk
+        else -> Icons.AutoMirrored.Filled.DirectionsWalk
     }
 }
 

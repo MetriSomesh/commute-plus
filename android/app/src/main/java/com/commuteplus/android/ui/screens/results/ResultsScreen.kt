@@ -133,6 +133,7 @@ fun ResultsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SortChipsRow(selected: SortOption, onSelect: (SortOption) -> Unit) {
     Row(

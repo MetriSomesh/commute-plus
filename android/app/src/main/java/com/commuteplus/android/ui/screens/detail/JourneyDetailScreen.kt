@@ -6,7 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -96,7 +96,7 @@ fun JourneyDetailScreen(
                         style = MaterialTheme.typography.titleSmall,
                     )
                 }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                Divider(color = MaterialTheme.colorScheme.outline)
             }
 
             // Booking links for on-demand modes (no in-app price — open the aggregator app)
@@ -114,7 +114,7 @@ fun JourneyDetailScreen(
                             bookingButtons.forEach { (label, url) ->
                                 OutlinedButton(onClick = { DeepLinks.open(context, url) }) {
                                     Icon(
-                                        Icons.Filled.OpenInNew,
+                                        Icons.AutoMirrored.Filled.OpenInNew,
                                         contentDescription = null,
                                         modifier = Modifier.size(16.dp),
                                     )
@@ -124,7 +124,7 @@ fun JourneyDetailScreen(
                             }
                         }
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                    Divider(color = MaterialTheme.colorScheme.outline)
                 }
             }
 

@@ -118,7 +118,7 @@ fun SearchScreen(
 
         // --- Autocomplete suggestions ---
         if (state.suggestions.isNotEmpty()) {
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            Divider(color = MaterialTheme.colorScheme.outline)
             LazyColumn(
                 modifier = Modifier.weight(1f, fill = false),
             ) {
