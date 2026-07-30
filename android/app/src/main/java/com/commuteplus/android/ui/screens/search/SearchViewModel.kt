@@ -4,11 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.commuteplus.android.data.api.PlaceDto
 import com.commuteplus.android.data.repository.JourneyRepository
+import com.commuteplus.android.util.LocationProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -30,6 +33,7 @@ enum class ActiveField { ORIGIN, DESTINATION, NONE }
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val repository: JourneyRepository,
+    private val locationProvider: LocationProvider,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SearchState())
@@ -71,10 +75,29 @@ class SearchViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Fetch the device's real GPS location and set it as the origin.
+     * The caller (screen) must ensure location permission is granted first; if it isn't,
+     * [LocationProvider.getCurrentLocation] returns null and this is a no-op.
+     */
     fun useCurrentLocationAsOrigin() {
-        // TODO: Integrate with FusedLocationProvider to get real GPS coordinates
-        // For now this is a placeholder for the location permission flow.
-        // When wired, it reverse-geocodes the user's position via Photon and fills the origin.
+        viewModelScope.launch {
+            val loc = locationProvider.getCurrentLocation() ?: return@launch
+            val place = PlaceDto(
+                id = "current-location",
+                name = "Current location",
+                lat = loc.lat,
+                lng = loc.lng,
+            )
+            _state.update {
+                it.copy(
+                    selectedOrigin = place,
+                    originQuery = place.name,
+                    suggestions = emptyList(),
+                    activeField = ActiveField.NONE,
+                )
+            }
+        }
     }
 
     /**

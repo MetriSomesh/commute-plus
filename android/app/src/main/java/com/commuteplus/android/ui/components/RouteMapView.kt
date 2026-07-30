@@ -1,43 +1,41 @@
 package com.commuteplus.android.ui.components
 
-import android.content.Context
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.commuteplus.android.data.api.JourneyDto
-import com.commuteplus.android.data.api.JourneyLegDto
 import org.maplibre.android.MapLibre
-import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
-import org.maplibre.android.plugins.annotation.LineManager
-import org.maplibre.android.plugins.annotation.LineOptions
-import org.maplibre.android.plugins.annotation.SymbolManager
-import org.maplibre.android.plugins.annotation.SymbolOptions
+import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.PropertyFactory
-import org.maplibre.android.utils.ColorUtils
+import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.geojson.Feature
+import org.maplibre.geojson.FeatureCollection
+import org.maplibre.geojson.LineString
+import org.maplibre.geojson.Point
 
 /**
- * MapLibre map view composable that draws journey legs on a real OSM map.
+ * MapLibre map that draws a journey's legs on a real OSM basemap.
  *
- * - Transit legs: solid colored lines in mode color.
- * - Walk legs: dashed gray lines.
- * - Board/alight points: circle markers.
+ * Each leg is drawn as a line segment between its stops in that mode's color; walk legs are dashed.
+ * (Leg geometry from the backend is stop-to-stop, so segments are straight lines between stops —
+ * accurate endpoints, approximate path. Full shape geometry can be added when the API exposes it.)
  *
- * Tile source: Protomaps .pmtiles (configured via STYLE_URL).
- * No API key, no paid account.
+ * Tiles: set STYLE_URL to a Protomaps/self-hosted style for production. The MapLibre demo style
+ * is used as a no-account default for development. No API key required.
  */
 
-// Default OSM tile style — replace with Protomaps/self-hosted URL in production.
-// This uses the OSM demo raster tiles for development. Replace before production deployment.
 private const val STYLE_URL = "https://demotiles.maplibre.org/style.json"
 
 @Composable
@@ -46,49 +44,97 @@ fun RouteMapView(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Initialize MapLibre (required once per app lifecycle)
-    LaunchedEffect(Unit) {
-        MapLibre.getInstance(context)
+    // MapLibre must be initialized before inflating a MapView.
+    remember { MapLibre.getInstance(context) }
+
+    // Create the MapView once and forward lifecycle events to it (required by MapLibre).
+    val mapView = remember { MapView(context) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_CREATE -> mapView.onCreate(null)
+                Lifecycle.Event.ON_START -> mapView.onStart()
+                Lifecycle.Event.ON_RESUME -> mapView.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+                Lifecycle.Event.ON_STOP -> mapView.onStop()
+                Lifecycle.Event.ON_DESTROY -> mapView.onDestroy()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        mapView.onCreate(null)
+        mapView.onStart()
+        mapView.onResume()
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            mapView.onPause()
+            mapView.onStop()
+            mapView.onDestroy()
+        }
     }
 
     AndroidView(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(240.dp),
-        factory = { ctx ->
-            MapView(ctx).apply {
-                getMapAsync { map ->
-                    map.setStyle(Style.Builder().fromUri(STYLE_URL)) { style ->
-                        drawJourneyOnMap(map, journey)
-                    }
+        modifier = modifier,
+        factory = { mapView },
+        update = { view ->
+            view.getMapAsync { map ->
+                map.setStyle(Style.Builder().fromUri(STYLE_URL)) { style ->
+                    drawJourney(style, map, journey)
                 }
             }
         },
     )
 }
 
-private fun drawJourneyOnMap(map: MapLibreMap, journey: JourneyDto) {
-    // Collect all points to compute bounds
+private fun drawJourney(style: Style, map: MapLibreMap, journey: JourneyDto) {
     val allPoints = mutableListOf<LatLng>()
 
-    journey.legs.forEach { leg ->
+    journey.legs.forEachIndexed { index, leg ->
+        val start = Point.fromLngLat(leg.from.lng, leg.from.lat)
+        val end = Point.fromLngLat(leg.to.lng, leg.to.lat)
+        val line = LineString.fromLngLats(listOf(start, end))
+
+        val sourceId = "leg-source-$index"
+        val layerId = "leg-layer-$index"
+
+        // Avoid duplicate source/layer ids if the style reloads.
+        if (style.getSource(sourceId) == null) {
+            style.addSource(GeoJsonSource(sourceId, FeatureCollection.fromFeature(Feature.fromGeometry(line))))
+
+            val isWalk = leg.mode.equals("WALK", ignoreCase = true)
+            val colorInt = modeColor(leg.mode).toArgbInt()
+
+            val layer = LineLayer(layerId, sourceId).withProperties(
+                PropertyFactory.lineColor(colorInt),
+                PropertyFactory.lineWidth(if (isWalk) 3f else 5f),
+                PropertyFactory.lineDasharray(if (isWalk) arrayOf(2f, 2f) else arrayOf(1f)),
+            )
+            style.addLayer(layer)
+        }
+
         allPoints.add(LatLng(leg.from.lat, leg.from.lng))
         allPoints.add(LatLng(leg.to.lat, leg.to.lng))
     }
 
-    // Zoom to fit all points
+    // Fit the camera to the full route.
     if (allPoints.size >= 2) {
         val bounds = LatLngBounds.Builder().includes(allPoints).build()
-        map.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 64))
+        map.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 80))
     } else if (allPoints.isNotEmpty()) {
-        map.moveCamera(
-            CameraUpdateFactory.newCameraPosition(
-                CameraPosition.Builder()
-                    .target(allPoints.first())
-                    .zoom(14.0)
-                    .build()
-            )
-        )
+        map.moveCamera(CameraUpdateFactory.newLatLngZoom(allPoints.first(), 14.0))
     }
+}
+
+/** Convert a Compose Color to a packed ARGB int for MapLibre. */
+private fun androidx.compose.ui.graphics.Color.toArgbInt(): Int {
+    return android.graphics.Color.argb(
+        (alpha * 255).toInt(),
+        (red * 255).toInt(),
+        (green * 255).toInt(),
+        (blue * 255).toInt(),
+    )
 }

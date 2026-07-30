@@ -33,14 +33,15 @@ class RoadDistanceService(private val osmFile: File) {
 
         log.info("Initializing GraphHopper with OSM: ${osmFile.name}")
 
-        hopper = GraphHopper().apply {
-            osmFile = this@RoadDistanceService.osmFile.absolutePath
-            graphHopperLocation = osmFile.parentFile.resolve("gh-cache").absolutePath
-            setProfiles(
-                Profile("car").setVehicle("car").setWeighting("fastest"),
-                Profile("bike").setVehicle("bike").setWeighting("fastest"),
-            )
-        }
+        val cacheDir = File(osmFile.parentFile, "gh-cache")
+
+        hopper = GraphHopper()
+        hopper.setOSMFile(osmFile.absolutePath)
+        hopper.graphHopperLocation = cacheDir.absolutePath
+        hopper.setProfiles(
+            Profile("car").setVehicle("car").setWeighting("fastest"),
+            Profile("bike").setVehicle("bike").setWeighting("fastest"),
+        )
         hopper.importOrLoad()
 
         log.info("GraphHopper ready. Road routing available.")

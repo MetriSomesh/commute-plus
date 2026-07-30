@@ -21,4 +21,5 @@
     <!-- Detail screen -->
     <string name="detail_title">ಪ್ರಯಾಣ ವಿವರ</string>
     <string name="detail_not_found">ಪ್ರಯಾಣ ವಿವರಗಳು ಲಭ್ಯವಿಲ್ಲ.</string>
+    <string name="detail_check_price">ನೇರ ದರ ನೋಡಿ ಮತ್ತು ಬುಕ್ ಮಾಡಿ:</string>
 </resources>

@@ -5,11 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.commuteplus.android.data.api.JourneyDto
 import com.commuteplus.android.data.api.JourneyPlanResponse
 import com.commuteplus.android.data.repository.JourneyRepository
+import com.commuteplus.android.data.session.JourneySessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -29,12 +29,11 @@ enum class SortOption { FASTEST, CHEAPEST, FEWEST_TRANSFERS }
 @HiltViewModel
 class ResultsViewModel @Inject constructor(
     private val repository: JourneyRepository,
+    private val sessionStore: JourneySessionStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<ResultsUiState>(ResultsUiState.Loading)
     val state: StateFlow<ResultsUiState> = _state.asStateFlow()
-
-    private var fullResponse: JourneyPlanResponse? = null
 
     fun planJourney(originLat: Double, originLng: Double, destLat: Double, destLng: Double) {
         viewModelScope.launch {
@@ -43,13 +42,22 @@ class ResultsViewModel @Inject constructor(
             val result = repository.planJourney(originLat, originLng, destLat, destLng)
 
             result.onSuccess { response ->
-                fullResponse = response
                 if (response.journeys.isEmpty()) {
                     _state.value = ResultsUiState.Empty
                 } else {
+                    val sorted = sortJourneys(response.journeys, SortOption.FASTEST)
+                    // Share the current result set with the detail screen (see JourneySessionStore).
+                    sessionStore.setPlan(
+                        journeys = sorted,
+                        deepLinks = response.deepLinks,
+                        originLat = originLat,
+                        originLng = originLng,
+                        destLat = destLat,
+                        destLng = destLng,
+                    )
                     _state.value = ResultsUiState.Success(
                         response = response,
-                        sortedJourneys = sortJourneys(response.journeys, SortOption.FASTEST),
+                        sortedJourneys = sorted,
                     )
                 }
             }.onFailure { error ->
@@ -63,10 +71,9 @@ class ResultsViewModel @Inject constructor(
     fun setSortOption(option: SortOption) {
         val current = _state.value
         if (current is ResultsUiState.Success) {
-            _state.value = current.copy(
-                sortBy = option,
-                sortedJourneys = sortJourneys(current.response.journeys, option),
-            )
+            val sorted = sortJourneys(current.response.journeys, option)
+            sessionStore.updateOrder(sorted) // keep detail screen index-aligned
+            _state.value = current.copy(sortBy = option, sortedJourneys = sorted)
         }
     }
 

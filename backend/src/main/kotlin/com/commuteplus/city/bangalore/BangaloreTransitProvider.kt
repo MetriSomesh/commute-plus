@@ -6,6 +6,8 @@ import com.commuteplus.fare.BangaloreBikeTaxiFare
 import com.commuteplus.fare.BangaloreCabFare
 import com.commuteplus.routing.OtpRouterService
 import com.commuteplus.routing.RoadDistanceService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.time.Instant
@@ -62,15 +64,18 @@ class BangaloreTransitProvider(
         return emptyList()
     }
 
-    override fun planTransit(request: JourneyRequest): List<Journey> {
+    override suspend fun planTransit(request: JourneyRequest): List<Journey> {
         return otpRouter.planTransit(request)
     }
 
-    override fun estimateDirectModes(request: JourneyRequest): List<Journey> {
+    override suspend fun estimateDirectModes(request: JourneyRequest): List<Journey> {
         val results = mutableListOf<Journey>()
 
-        // Get real road distance from GraphHopper (OSM-based, not straight line)
-        val routeResult = roadDistance.route(request.origin, request.destination)
+        // Get real road distance from GraphHopper (OSM-based, not straight line).
+        // GraphHopper routing is blocking/CPU-bound, so run it off the event-loop threads.
+        val routeResult = withContext(Dispatchers.IO) {
+            roadDistance.route(request.origin, request.destination)
+        }
 
         if (routeResult == null) {
             log.warn("No road route found between ${request.origin} and ${request.destination}")

@@ -21,4 +21,5 @@
     <!-- Detail screen -->
     <string name="detail_title">यात्रा विवरण</string>
     <string name="detail_not_found">यात्रा विवरण उपलब्ध नहीं।</string>
+    <string name="detail_check_price">लाइव कीमत देखें और बुक करें:</string>
 </resources>

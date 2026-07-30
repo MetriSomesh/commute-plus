@@ -1,5 +1,9 @@
 package com.commuteplus.android.ui.screens.search
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,8 +16,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.commuteplus.android.R
 import com.commuteplus.android.data.api.PlaceDto
@@ -33,6 +39,25 @@ fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+
+    // Location permission launcher — on grant, fetch GPS and set it as the origin.
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) viewModel.useCurrentLocationAsOrigin()
+    }
+
+    fun requestCurrentLocation() {
+        val alreadyGranted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (alreadyGranted) {
+            viewModel.useCurrentLocationAsOrigin()
+        } else {
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -64,7 +89,7 @@ fun SearchScreen(
                 )
             },
             trailingIcon = {
-                IconButton(onClick = { viewModel.useCurrentLocationAsOrigin() }) {
+                IconButton(onClick = { requestCurrentLocation() }) {
                     Icon(
                         Icons.Filled.MyLocation,
                         contentDescription = stringResource(R.string.use_my_location),

@@ -25,7 +25,8 @@ import java.io.File
 private val log = LoggerFactory.getLogger("Application")
 
 fun main() {
-    val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
+    // Our API defaults to 9090 to avoid clashing with the OTP server (which uses 8080).
+    val port = System.getenv("PORT")?.toIntOrNull() ?: 9090
     val dataDir = File(System.getenv("OTP_DATA_DIR") ?: "data")
 
     log.info("Starting Commute+ backend on port $port")
@@ -39,28 +40,30 @@ fun main() {
         osmFile ?: File(dataDir, "bangalore.osm.pbf")
     )
 
-    // 2. OpenTripPlanner — real transit routing from GTFS + OSM
-    val otpRouter = OtpRouterService(dataDir)
+    // Shared HTTP client for outbound calls (OTP + Photon)
+    val httpClient = HttpClient(CIO)
+
+    // 2. OpenTripPlanner — real transit routing, called over HTTP (OTP runs as a separate process)
+    val otpUrl = System.getenv("OTP_GRAPHQL_URL")
+        ?: "http://localhost:8080/otp/routers/default/index/graphql"
+    val otpRouter = OtpRouterService(otpGraphQlUrl = otpUrl, httpClient = httpClient)
 
     // 3. Photon geocoder — real OSM-based place search
     val photonUrl = System.getenv("PHOTON_URL") ?: "https://photon.komoot.io"
-    val httpClient = HttpClient(CIO)
     val geocoder = PhotonGeocoder(baseUrl = photonUrl, httpClient = httpClient)
 
     // 4. Bangalore city provider — wires routing + fares together
     val bangaloreProvider = BangaloreTransitProvider(otpRouter, roadDistanceService)
 
-    // Initialize services (this builds/loads the routing graph — takes time on first run)
+    // Initialize GraphHopper (builds/loads the road graph — takes time on first run).
+    // OTP routing is remote (HTTP), so it needs no local init here.
     try {
         roadDistanceService.initialize()
-        otpRouter.initialize()
-        log.info("All routing services initialized successfully.")
+        log.info("GraphHopper road routing initialized successfully.")
     } catch (e: IllegalArgumentException) {
-        log.error("DATA FILES MISSING: ${e.message}")
-        log.error("The backend cannot start without real data. See docs/PLAN.md §12 for required files.")
-        log.error("Place the files in: ${dataDir.absolutePath}")
-        // Start the server anyway in "degraded mode" — transit routing won't work but the API
-        // will return useful error messages. Direct mode estimates require only GraphHopper.
+        log.error("OSM DATA FILE MISSING: ${e.message}")
+        log.error("Auto/bike/cab distance estimates need the Bangalore .osm.pbf. See docs/SETUP.md.")
+        // Start anyway in degraded mode: transit (OTP) may still work; direct-mode estimates won't.
     }
 
     // --- Start Ktor server ---

@@ -34,13 +34,15 @@ interface TransitDataProvider {
      * Plan public-transit + walk journeys (bus, metro) for the request.
      * Multi-leg results are expected here — this is where OTP2 does the heavy lifting.
      * Returns an empty list if no transit route exists (caller falls back to direct modes).
+     *
+     * Suspending: implementations call an external routing server (OTP) over the network.
      */
-    fun planTransit(request: JourneyRequest): List<Journey>
+    suspend fun planTransit(request: JourneyRequest): List<Journey>
 
     /**
      * Estimate on-demand "direct" options (auto, bike-taxi, cab) from origin to destination.
      * Computed from road distance/time + this city's fare rules. Always produces estimates
      * (Fare.estimated == true) so results exist even where transit data does not.
      */
-    fun estimateDirectModes(request: JourneyRequest): List<Journey>
+    suspend fun estimateDirectModes(request: JourneyRequest): List<Journey>
 }

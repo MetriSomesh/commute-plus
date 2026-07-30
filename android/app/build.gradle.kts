@@ -16,8 +16,9 @@ android {
         versionCode = 1
         versionName = "0.1.0"
 
-        // Backend URL (configurable per build type)
-        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8080\"")
+        // Backend URL. 10.0.2.2 is the host machine as seen from the Android emulator.
+        // Port 9090 matches the Commute+ backend default (see backend Application.kt).
+        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:9090\"")
     }
 
     buildTypes {

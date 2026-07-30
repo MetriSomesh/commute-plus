@@ -21,4 +21,5 @@
     <!-- Detail screen -->
     <string name="detail_title">Journey details</string>
     <string name="detail_not_found">Journey details not available.</string>
+    <string name="detail_check_price">Check live price and book:</string>
 </resources>

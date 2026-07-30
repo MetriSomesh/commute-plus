@@ -10,6 +10,9 @@ import com.commuteplus.android.ui.screens.detail.JourneyDetailScreen
 import com.commuteplus.android.ui.screens.results.ResultsScreen
 import com.commuteplus.android.ui.screens.search.SearchScreen
 
+// Coordinates are passed as String route args (parsed to Double) to preserve full precision.
+// NavType.FloatType would silently truncate lat/lng and shift positions by several meters.
+
 /**
  * App navigation graph.
  *
@@ -36,17 +39,18 @@ fun CommutePlusNavHost() {
         composable(
             route = "results/{originLat}/{originLng}/{destLat}/{destLng}",
             arguments = listOf(
-                navArgument("originLat") { type = NavType.FloatType },
-                navArgument("originLng") { type = NavType.FloatType },
-                navArgument("destLat") { type = NavType.FloatType },
-                navArgument("destLng") { type = NavType.FloatType },
+                navArgument("originLat") { type = NavType.StringType },
+                navArgument("originLng") { type = NavType.StringType },
+                navArgument("destLat") { type = NavType.StringType },
+                navArgument("destLng") { type = NavType.StringType },
             )
         ) { backStackEntry ->
+            val args = backStackEntry.arguments
             ResultsScreen(
-                originLat = backStackEntry.arguments?.getFloat("originLat")?.toDouble() ?: 0.0,
-                originLng = backStackEntry.arguments?.getFloat("originLng")?.toDouble() ?: 0.0,
-                destLat = backStackEntry.arguments?.getFloat("destLat")?.toDouble() ?: 0.0,
-                destLng = backStackEntry.arguments?.getFloat("destLng")?.toDouble() ?: 0.0,
+                originLat = args?.getString("originLat")?.toDoubleOrNull() ?: 0.0,
+                originLng = args?.getString("originLng")?.toDoubleOrNull() ?: 0.0,
+                destLat = args?.getString("destLat")?.toDoubleOrNull() ?: 0.0,
+                destLng = args?.getString("destLng")?.toDoubleOrNull() ?: 0.0,
                 onJourneySelected = { journeyIndex ->
                     navController.navigate("detail/$journeyIndex")
                 },

@@ -13,11 +13,9 @@ application {
 
 repositories {
     mavenCentral()
-    maven("https://repo.entur.org/repository/maven-public/") // OTP releases
 }
 
 val ktorVersion = "2.3.7"
-val otp2Version = "2.5.0"
 
 dependencies {
     // Ktor server
@@ -28,13 +26,14 @@ dependencies {
     implementation("io.ktor:ktor-server-cors:$ktorVersion")
     implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
 
+    // Ktor client (used to call OpenTripPlanner GraphQL API + Photon geocoder)
+    implementation("io.ktor:ktor-client-core:$ktorVersion")
+    implementation("io.ktor:ktor-client-cio:$ktorVersion")
+
     // Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
 
-    // OpenTripPlanner 2 (routing engine)
-    implementation("org.opentripplanner:otp:$otp2Version")
-
-    // GraphHopper (road distance for auto/cab fare calculation)
+    // GraphHopper (road distance for auto/cab/bike fare calculation)
     implementation("com.graphhopper:graphhopper-core:8.0")
 
     // Logging
