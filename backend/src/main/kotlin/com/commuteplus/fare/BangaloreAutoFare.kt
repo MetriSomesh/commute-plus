@@ -57,7 +57,7 @@ object BangaloreAutoFare {
 
         // Metered fare is deterministic for distance, but real trips add waiting-time charges we
         // cannot predict. Present a small upward band and label as estimate rather than a firm quote.
-        return Fare(minRupees = rounded, maxRupees = Math.round(rounded * 1.1), estimated = true)
+        return Fare(minRupees = rounded, maxRupees = Math.round(rounded * 1.1).toDouble(), estimated = true)
     }
 
     private fun isNight(at: Instant): Boolean {
