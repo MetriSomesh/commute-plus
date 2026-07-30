@@ -62,12 +62,23 @@ class OtpRouterService(
         val fromLon = request.origin.lng
         val toLat = request.destination.lat
         val toLon = request.destination.lng
-        // OTP expects epoch seconds converted to date/time; omit to use "now".
+
+        // Honor the requested departure time. OTP's GTFS GraphQL API takes separate `date`
+        // (YYYY-MM-DD) and `time` (HH:mm) fields, interpreted in the feed's timezone (IST here).
+        // If no time was requested, fall back to "now". Without this, transit results would be
+        // wrong outside the current moment (and empty at night when no service runs).
+        val instant = request.departAt ?: Instant.now()
+        val ist = instant.atZone(java.time.ZoneId.of("Asia/Kolkata"))
+        val date = ist.toLocalDate().toString() // YYYY-MM-DD
+        val time = "%02d:%02d".format(ist.hour, ist.minute)
+
         return """
             {
               plan(
                 from: { lat: $fromLat, lon: $fromLon }
                 to: { lat: $toLat, lon: $toLon }
+                date: "$date"
+                time: "$time"
                 transportModes: [{mode: BUS}, {mode: RAIL}, {mode: SUBWAY}, {mode: TRAM}, {mode: WALK}]
                 numItineraries: 5
               ) {
@@ -92,22 +103,32 @@ class OtpRouterService(
         """.trimIndent()
     }
 
+    // Null-safe accessors. In kotlinx-serialization a JSON `null` is `JsonNull` (a non-null
+    // JsonElement), so `?.jsonObject` does NOT guard it and would throw. These safe casts return
+    // Kotlin null for both missing keys and explicit JSON nulls — essential because transit legs
+    // have `route`/`trip` = null on walk legs.
+    private fun JsonElement?.obj(): JsonObject? = this as? JsonObject
+    private fun JsonElement?.arr(): JsonArray? = this as? JsonArray
+    private fun JsonElement?.str(): String? = (this as? JsonPrimitive)?.contentOrNull
+    private fun JsonElement?.dbl(): Double? = (this as? JsonPrimitive)?.doubleOrNull
+    private fun JsonElement?.lng(): Long? = (this as? JsonPrimitive)?.longOrNull
+
     private fun parseItineraries(body: String): List<Journey> {
-        val root = json.parseToJsonElement(body).jsonObject
-        val itineraries = root["data"]?.jsonObject
-            ?.get("plan")?.jsonObject
-            ?.get("itineraries")?.jsonArray
+        val root = json.parseToJsonElement(body).obj() ?: return emptyList()
+        val itineraries = root["data"].obj()
+            ?.get("plan").obj()
+            ?.get("itineraries").arr()
             ?: return emptyList()
 
         return itineraries.mapNotNull { itin ->
-            val itinObj = itin.jsonObject
-            val legsJson = itinObj["legs"]?.jsonArray ?: return@mapNotNull null
+            val itinObj = itin.obj() ?: return@mapNotNull null
+            val legsJson = itinObj["legs"].arr() ?: return@mapNotNull null
 
-            val legs = legsJson.mapNotNull { parseLeg(it.jsonObject) }
+            val legs = legsJson.mapNotNull { legEl -> legEl.obj()?.let { parseLeg(it) } }
             if (legs.isEmpty()) return@mapNotNull null
 
-            val totalDurationSec = itinObj["duration"]?.jsonPrimitive?.longOrNull ?: 0L
-            val walkDistance = itinObj["walkDistance"]?.jsonPrimitive?.doubleOrNull ?: 0.0
+            val totalDurationSec = itinObj["duration"].lng() ?: 0L
+            val walkDistance = itinObj["walkDistance"].dbl() ?: 0.0
             val transitLegs = legs.count { it.mode != TravelMode.WALK }
 
             Journey(
@@ -123,26 +144,26 @@ class OtpRouterService(
     }
 
     private fun parseLeg(leg: JsonObject): JourneyLeg? {
-        val otpMode = leg["mode"]?.jsonPrimitive?.contentOrNull ?: return null
+        val otpMode = leg["mode"].str() ?: return null
         val mode = mapOtpMode(otpMode)
 
-        val fromObj = leg["from"]?.jsonObject
-        val toObj = leg["to"]?.jsonObject ?: return null
-        val fromName = fromObj?.get("name")?.jsonPrimitive?.contentOrNull ?: "Start"
-        val toName = toObj["name"]?.jsonPrimitive?.contentOrNull ?: "End"
-        val fromLat = fromObj?.get("lat")?.jsonPrimitive?.doubleOrNull ?: 0.0
-        val fromLon = fromObj?.get("lon")?.jsonPrimitive?.doubleOrNull ?: 0.0
-        val toLat = toObj["lat"]?.jsonPrimitive?.doubleOrNull ?: 0.0
-        val toLon = toObj["lon"]?.jsonPrimitive?.doubleOrNull ?: 0.0
+        val fromObj = leg["from"].obj()
+        val toObj = leg["to"].obj() ?: return null
+        val fromName = fromObj?.get("name").str() ?: "Start"
+        val toName = toObj["name"].str() ?: "End"
+        val fromLat = fromObj?.get("lat").dbl() ?: 0.0
+        val fromLon = fromObj?.get("lon").dbl() ?: 0.0
+        val toLat = toObj["lat"].dbl() ?: 0.0
+        val toLon = toObj["lon"].dbl() ?: 0.0
 
-        val startMillis = leg["startTime"]?.jsonPrimitive?.longOrNull
-        val endMillis = leg["endTime"]?.jsonPrimitive?.longOrNull
-        val durationSec = leg["duration"]?.jsonPrimitive?.doubleOrNull?.toLong() ?: 0L
-        val distance = leg["distance"]?.jsonPrimitive?.doubleOrNull ?: 0.0
+        val startMillis = leg["startTime"].lng()
+        val endMillis = leg["endTime"].lng()
+        val durationSec = leg["duration"].dbl()?.toLong() ?: 0L
+        val distance = leg["distance"].dbl() ?: 0.0
 
-        val routeName = leg["route"]?.jsonObject?.get("shortName")?.jsonPrimitive?.contentOrNull
-        val headsign = leg["trip"]?.jsonObject?.get("tripHeadsign")?.jsonPrimitive?.contentOrNull
-        val numStops = leg["intermediateStops"]?.jsonArray?.size
+        val routeName = leg["route"].obj()?.get("shortName").str()
+        val headsign = leg["trip"].obj()?.get("tripHeadsign").str()
+        val numStops = leg["intermediateStops"].arr()?.size
 
         return JourneyLeg(
             mode = mode,

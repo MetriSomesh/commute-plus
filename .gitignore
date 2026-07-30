@@ -19,6 +19,11 @@ backend/build/
 backend/data/*.pbf
 backend/data/*.zip
 backend/data/graph/
+backend/data/gh-cache/
+
+# Large local runtime artifacts (downloaded, not versioned)
+otp/
+backend/osm-source/
 
 # OS
 .DS_Store

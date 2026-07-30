@@ -4,6 +4,7 @@ import com.commuteplus.domain.LatLng
 import com.graphhopper.GHRequest
 import com.graphhopper.GraphHopper
 import com.graphhopper.config.Profile
+import com.graphhopper.util.CustomModel
 import org.slf4j.LoggerFactory
 import java.io.File
 
@@ -35,12 +36,15 @@ class RoadDistanceService(private val osmFile: File) {
 
         val cacheDir = File(osmFile.parentFile, "gh-cache")
 
+        // GraphHopper 8 removed the "fastest" weighting; profiles now use "custom" with a
+        // CustomModel. An empty CustomModel yields fastest-by-default behavior from the vehicle's
+        // speeds, which is exactly what we want for distance/time estimates.
         hopper = GraphHopper()
         hopper.setOSMFile(osmFile.absolutePath)
         hopper.graphHopperLocation = cacheDir.absolutePath
         hopper.setProfiles(
-            Profile("car").setVehicle("car").setWeighting("fastest"),
-            Profile("bike").setVehicle("bike").setWeighting("fastest"),
+            Profile("car").setVehicle("car").setWeighting("custom").setCustomModel(CustomModel()),
+            Profile("bike").setVehicle("bike").setWeighting("custom").setCustomModel(CustomModel()),
         )
         hopper.importOrLoad()
 

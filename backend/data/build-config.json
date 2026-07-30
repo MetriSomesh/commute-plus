@@ -1,0 +1,9 @@
+{
+  "transitFeeds": [
+    { "type": "gtfs", "feedId": "bmtc", "source": "bmtc.zip" },
+    { "type": "gtfs", "feedId": "bmrcl", "source": "bmrcl.zip" }
+  ],
+  "osm": [
+    { "source": "bangalore.osm.pbf" }
+  ]
+}
