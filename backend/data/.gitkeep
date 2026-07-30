@@ -1,0 +1,8 @@
+# Place the following real data files here before running the backend:
+#
+# 1. BMTC bus GTFS feed (.zip) — from DULT or https://github.com/anikets95/bmtc-gtfs
+# 2. Namma Metro GTFS feed (.zip) — from BMRCL open data
+# 3. Bangalore OSM extract (.osm.pbf) — from https://download.geofabrik.de
+#
+# These files are git-ignored (too large for the repo).
+# See docs/PLAN.md §12 for full details.

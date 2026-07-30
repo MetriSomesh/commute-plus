@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ಕಮ್ಯೂಟ್+</string>
+
+    <!-- Search screen -->
+    <string name="search_title">ಎಲ್ಲಿಗೆ?</string>
+    <string name="search_from">ಇಲ್ಲಿಂದ</string>
+    <string name="search_to">ಅಲ್ಲಿಗೆ</string>
+    <string name="search_go">ಮಾರ್ಗಗಳನ್ನು ತೋರಿಸಿ</string>
+    <string name="use_my_location">ನನ್ನ ಸ್ಥಳ ಬಳಸಿ</string>
+
+    <!-- Results screen -->
+    <string name="results_title">ಮಾರ್ಗಗಳು</string>
+    <string name="results_loading">ಮಾರ್ಗಗಳನ್ನು ಹುಡುಕುತ್ತಿದೆ…</string>
+    <string name="results_empty">ಈ ಎರಡು ಸ್ಥಳಗಳ ನಡುವೆ ಯಾವುದೇ ಮಾರ್ಗ ಸಿಗಲಿಲ್ಲ. ಬೇರೆ ಸ್ಥಳಗಳನ್ನು ಪ್ರಯತ್ನಿಸಿ ಅಥವಾ ಎರಡೂ ಬೆಂಗಳೂರಿನಲ್ಲಿ ಇದೆಯೇ ಎಂದು ಪರಿಶೀಲಿಸಿ.</string>
+    <string name="results_error">ಏನೋ ತಪ್ಪಾಗಿದೆ</string>
+    <string name="sort_fastest">ವೇಗವಾದ</string>
+    <string name="sort_cheapest">ಅಗ್ಗದ</string>
+    <string name="sort_fewest_transfers">ಕಡಿಮೆ ಬದಲಾವಣೆ</string>
+
+    <!-- Detail screen -->
+    <string name="detail_title">ಪ್ರಯಾಣ ವಿವರ</string>
+    <string name="detail_not_found">ಪ್ರಯಾಣ ವಿವರಗಳು ಲಭ್ಯವಿಲ್ಲ.</string>
+</resources>

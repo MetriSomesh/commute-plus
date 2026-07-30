@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">कम्यूट+</string>
+
+    <!-- Search screen -->
+    <string name="search_title">कहाँ जाना है?</string>
+    <string name="search_from">कहाँ से</string>
+    <string name="search_to">कहाँ तक</string>
+    <string name="search_go">रास्ते दिखाएं</string>
+    <string name="use_my_location">मेरा स्थान उपयोग करें</string>
+
+    <!-- Results screen -->
+    <string name="results_title">रास्ते</string>
+    <string name="results_loading">रास्ते खोज रहे हैं…</string>
+    <string name="results_empty">इन दो जगहों के बीच कोई रास्ता नहीं मिला। अलग जगह आज़माएं या जाँचें कि दोनों बेंगलुरु में हैं।</string>
+    <string name="results_error">कुछ गलत हो गया</string>
+    <string name="sort_fastest">सबसे तेज़</string>
+    <string name="sort_cheapest">सबसे सस्ता</string>
+    <string name="sort_fewest_transfers">कम बदलाव</string>
+
+    <!-- Detail screen -->
+    <string name="detail_title">यात्रा विवरण</string>
+    <string name="detail_not_found">यात्रा विवरण उपलब्ध नहीं।</string>
+</resources>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Commute+</string>
+
+    <!-- Search screen -->
+    <string name="search_title">Where to?</string>
+    <string name="search_from">From</string>
+    <string name="search_to">To</string>
+    <string name="search_go">Show routes</string>
+    <string name="use_my_location">Use my location</string>
+
+    <!-- Results screen -->
+    <string name="results_title">Routes</string>
+    <string name="results_loading">Finding routes…</string>
+    <string name="results_empty">No routes found between these points. Try different locations or check that both are within Bengaluru.</string>
+    <string name="results_error">Something went wrong</string>
+    <string name="sort_fastest">Fastest</string>
+    <string name="sort_cheapest">Cheapest</string>
+    <string name="sort_fewest_transfers">Fewest changes</string>
+
+    <!-- Detail screen -->
+    <string name="detail_title">Journey details</string>
+    <string name="detail_not_found">Journey details not available.</string>
+</resources>
