@@ -97,14 +97,19 @@ private fun drawJourney(style: Style, map: MapLibreMap, journey: JourneyDto) {
     val allPoints = mutableListOf<LatLng>()
 
     journey.legs.forEachIndexed { index, leg ->
-        val start = Point.fromLngLat(leg.from.lng, leg.from.lat)
-        val end = Point.fromLngLat(leg.to.lng, leg.to.lat)
-        val line = LineString.fromLngLats(listOf(start, end))
+        // Prefer the leg's real path geometry (road/rail). Fall back to a straight stop-to-stop
+        // line only when the backend didn't provide an encoded polyline.
+        val points: List<Point> = decodePolyline(leg.geometry).ifEmpty {
+            listOf(
+                Point.fromLngLat(leg.from.lng, leg.from.lat),
+                Point.fromLngLat(leg.to.lng, leg.to.lat),
+            )
+        }
+        val line = LineString.fromLngLats(points)
 
         val sourceId = "leg-source-$index"
         val layerId = "leg-layer-$index"
 
-        // Avoid duplicate source/layer ids if the style reloads.
         if (style.getSource(sourceId) == null) {
             style.addSource(GeoJsonSource(sourceId, FeatureCollection.fromFeature(Feature.fromGeometry(line))))
 
@@ -114,22 +119,57 @@ private fun drawJourney(style: Style, map: MapLibreMap, journey: JourneyDto) {
             val layer = LineLayer(layerId, sourceId).withProperties(
                 PropertyFactory.lineColor(colorInt),
                 PropertyFactory.lineWidth(if (isWalk) 3f else 5f),
+                PropertyFactory.lineCap(org.maplibre.android.style.layers.Property.LINE_CAP_ROUND),
+                PropertyFactory.lineJoin(org.maplibre.android.style.layers.Property.LINE_JOIN_ROUND),
                 PropertyFactory.lineDasharray(if (isWalk) arrayOf(2f, 2f) else arrayOf(1f)),
             )
             style.addLayer(layer)
         }
 
-        allPoints.add(LatLng(leg.from.lat, leg.from.lng))
-        allPoints.add(LatLng(leg.to.lat, leg.to.lng))
+        points.forEach { allPoints.add(LatLng(it.latitude(), it.longitude())) }
     }
 
-    // Fit the camera to the full route.
     if (allPoints.size >= 2) {
         val bounds = LatLngBounds.Builder().includes(allPoints).build()
         map.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 80))
     } else if (allPoints.isNotEmpty()) {
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(allPoints.first(), 14.0))
     }
+}
+
+/**
+ * Decode a Google-encoded polyline (precision 5) into points. Matches the encoding produced by
+ * OTP (transit legs) and our GraphHopper encoder (auto/cab legs). Returns empty list for null/blank.
+ */
+private fun decodePolyline(encoded: String?): List<Point> {
+    if (encoded.isNullOrBlank()) return emptyList()
+    val points = mutableListOf<Point>()
+    var index = 0
+    var lat = 0
+    var lng = 0
+    while (index < encoded.length) {
+        var result = 1
+        var shift = 0
+        var b: Int
+        do {
+            b = encoded[index++].code - 63 - 1
+            result += b shl shift
+            shift += 5
+        } while (b >= 0x1f && index < encoded.length)
+        lat += if (result and 1 != 0) (result shr 1).inv() else result shr 1
+
+        result = 1
+        shift = 0
+        do {
+            b = encoded[index++].code - 63 - 1
+            result += b shl shift
+            shift += 5
+        } while (b >= 0x1f && index < encoded.length)
+        lng += if (result and 1 != 0) (result shr 1).inv() else result shr 1
+
+        points.add(Point.fromLngLat(lng / 1e5, lat / 1e5))
+    }
+    return points
 }
 
 /** Convert a Compose Color to a packed ARGB int for MapLibre. */

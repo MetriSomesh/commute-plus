@@ -101,6 +101,7 @@ class BangaloreTransitProvider(
                             duration = Duration.ofSeconds(durationSec.toLong()),
                             distanceMeters = distMeters,
                             fare = fare,
+                            geometry = routeResult.geometry,
                         )
                     ),
                     totalDuration = Duration.ofSeconds(durationSec.toLong()),
@@ -129,6 +130,7 @@ class BangaloreTransitProvider(
                             duration = Duration.ofSeconds(bikeDuration),
                             distanceMeters = distMeters,
                             fare = bikeFare, // null — no real source
+                            geometry = routeResult.geometry,
                         )
                     ),
                     totalDuration = Duration.ofSeconds(bikeDuration),
@@ -155,6 +157,7 @@ class BangaloreTransitProvider(
                             duration = Duration.ofSeconds(durationSec.toLong()),
                             distanceMeters = distMeters,
                             fare = cabFare, // null — no real source
+                            geometry = routeResult.geometry,
                         )
                     ),
                     totalDuration = Duration.ofSeconds(durationSec.toLong()),

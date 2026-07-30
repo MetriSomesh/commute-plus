@@ -40,6 +40,9 @@ data class JourneyLeg(
     val headsign: String? = null,   // vehicle destination sign
     val numStops: Int? = null,      // intermediate stops for transit legs
     val fare: Fare? = null,         // per-leg fare when known
+    // Encoded polyline (Google format, precision 5) tracing the leg along the actual road/rail
+    // path. Null when only stop-to-stop endpoints are known (map then draws a straight line).
+    val geometry: String? = null,
 )
 
 /** A complete A -> B option made of one or more legs. */

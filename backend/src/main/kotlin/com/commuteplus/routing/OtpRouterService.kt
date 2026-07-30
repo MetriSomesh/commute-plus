@@ -96,6 +96,7 @@ class OtpRouterService(
                     from { name lat lon }
                     to { name lat lon }
                     intermediateStops { name }
+                    legGeometry { points }
                   }
                 }
               }
@@ -164,6 +165,8 @@ class OtpRouterService(
         val routeName = leg["route"].obj()?.get("shortName").str()
         val headsign = leg["trip"].obj()?.get("tripHeadsign").str()
         val numStops = leg["intermediateStops"].arr()?.size
+        // OTP's legGeometry.points is a Google-encoded polyline (precision 5) along the real path.
+        val geometry = leg["legGeometry"].obj()?.get("points").str()
 
         return JourneyLeg(
             mode = mode,
@@ -177,6 +180,7 @@ class OtpRouterService(
             headsign = headsign,
             numStops = numStops,
             fare = null,
+            geometry = geometry,
         )
     }
 

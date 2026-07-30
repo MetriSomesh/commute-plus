@@ -66,6 +66,7 @@ data class JourneyLegDto(
     val headsign: String? = null,
     val numStops: Int? = null,
     val fare: FareDto? = null,
+    val geometry: String? = null,   // encoded polyline (precision 5) of the leg's real path
 )
 
 @Serializable

@@ -24,6 +24,8 @@ class RoadDistanceService(private val osmFile: File) {
     data class RouteResult(
         val distanceMeters: Int,
         val durationSeconds: Int,
+        // Google-encoded polyline (precision 5) of the road path, for drawing on the map.
+        val geometry: String?,
     )
 
     fun initialize() {
@@ -70,6 +72,36 @@ class RoadDistanceService(private val osmFile: File) {
         return RouteResult(
             distanceMeters = best.distance.toInt(),
             durationSeconds = (best.time / 1000).toInt(),
+            geometry = encodePolyline(best.points),
         )
+    }
+
+    /**
+     * Encode a GraphHopper PointList into a Google-encoded polyline (precision 5), matching the
+     * format OTP uses so the client can decode both with one algorithm.
+     */
+    private fun encodePolyline(points: com.graphhopper.util.PointList): String {
+        val sb = StringBuilder()
+        var prevLat = 0L
+        var prevLng = 0L
+        for (i in 0 until points.size()) {
+            val lat = Math.round(points.getLat(i) * 1e5)
+            val lng = Math.round(points.getLon(i) * 1e5)
+            encodeSignedNumber(lat - prevLat, sb)
+            encodeSignedNumber(lng - prevLng, sb)
+            prevLat = lat
+            prevLng = lng
+        }
+        return sb.toString()
+    }
+
+    private fun encodeSignedNumber(num: Long, sb: StringBuilder) {
+        var sgn = num shl 1
+        if (num < 0) sgn = sgn.inv()
+        while (sgn >= 0x20) {
+            sb.append(((0x20 or (sgn and 0x1f).toInt()) + 63).toChar())
+            sgn = sgn shr 5
+        }
+        sb.append((sgn.toInt() + 63).toChar())
     }
 }

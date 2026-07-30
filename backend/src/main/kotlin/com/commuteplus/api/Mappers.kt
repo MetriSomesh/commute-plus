@@ -33,6 +33,7 @@ fun JourneyLeg.toDto() = JourneyLegDto(
     headsign = headsign,
     numStops = numStops,
     fare = fare?.toDto(),
+    geometry = geometry,
 )
 
 fun Journey.toDto() = JourneyDto(
