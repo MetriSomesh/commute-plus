@@ -49,6 +49,9 @@ import org.maplibre.geojson.Point
 
 private const val STYLE_URL = "https://tiles.openfreemap.org/styles/positron"
 
+// The highlighted route line + stop rings use this blue.
+private val ROUTE_BLUE = AndroidColor.parseColor("#1A73E8")
+
 @Composable
 fun RouteMapView(
     journey: JourneyDto,
@@ -117,12 +120,11 @@ private fun drawJourney(style: Style, map: MapLibreMap, journey: JourneyDto) {
         legPointLists.add(points)
         val line = LineString.fromLngLats(points)
         val isWalk = leg.mode.equals("WALK", ignoreCase = true)
-        val colorInt = modeColor(leg.mode).toArgbInt()
 
         val sourceId = "leg-source-$index"
         style.addSource(GeoJsonSource(sourceId, FeatureCollection.fromFeature(Feature.fromGeometry(line))))
 
-        // White casing (skip for walk dashes, where it would look muddy).
+        // Thin white casing under transit legs so the blue route stands out on the basemap.
         if (!isWalk) {
             style.addLayer(
                 LineLayer("leg-casing-$index", sourceId).withProperties(
@@ -133,9 +135,10 @@ private fun drawJourney(style: Style, map: MapLibreMap, journey: JourneyDto) {
                 )
             )
         }
+        // The highlighted route line itself is blue.
         style.addLayer(
             LineLayer("leg-line-$index", sourceId).withProperties(
-                PropertyFactory.lineColor(colorInt),
+                PropertyFactory.lineColor(ROUTE_BLUE),
                 PropertyFactory.lineWidth(if (isWalk) 4f else 6f),
                 PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
                 PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
@@ -160,7 +163,7 @@ private fun drawJourney(style: Style, map: MapLibreMap, journey: JourneyDto) {
             CircleLayer("stops-layer", "stops-source").withProperties(
                 PropertyFactory.circleRadius(5f),
                 PropertyFactory.circleColor(AndroidColor.WHITE),
-                PropertyFactory.circleStrokeColor(AndroidColor.parseColor("#0D7377")),
+                PropertyFactory.circleStrokeColor(ROUTE_BLUE),
                 PropertyFactory.circleStrokeWidth(3f),
             )
         )
