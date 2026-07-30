@@ -135,16 +135,19 @@ private fun drawJourney(style: Style, map: MapLibreMap, journey: JourneyDto) {
                 )
             )
         }
-        // The highlighted route line itself is blue.
-        style.addLayer(
-            LineLayer("leg-line-$index", sourceId).withProperties(
-                PropertyFactory.lineColor(ROUTE_BLUE),
-                PropertyFactory.lineWidth(if (isWalk) 4f else 6f),
-                PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
-                PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
-                PropertyFactory.lineDasharray(if (isWalk) arrayOf(1.5f, 1.5f) else arrayOf(1f)),
-            )
+        // The highlighted route line itself is blue. Transit legs are solid; walk legs are dashed.
+        // NOTE: a dash array must be dash/gap PAIRS — a single-element array renders the line as a
+        // degenerate (near-invisible) pattern, which previously left only the white casing showing.
+        val lineLayer = LineLayer("leg-line-$index", sourceId).withProperties(
+            PropertyFactory.lineColor(ROUTE_BLUE),
+            PropertyFactory.lineWidth(if (isWalk) 4f else 6f),
+            PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+            PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
         )
+        if (isWalk) {
+            lineLayer.setProperties(PropertyFactory.lineDasharray(arrayOf(1.5f, 1.5f)))
+        }
+        style.addLayer(lineLayer)
 
         points.forEach { allPoints.add(LatLng(it.latitude(), it.longitude())) }
     }
