@@ -95,6 +95,7 @@ dependencies {
 
     // Testing
     testImplementation("junit:junit:4.13.2")
+    androidTestImplementation(composeBom) // BOM also governs instrumented-test artifact versions
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }
