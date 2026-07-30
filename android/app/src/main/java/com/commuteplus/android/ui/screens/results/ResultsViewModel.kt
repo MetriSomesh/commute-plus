@@ -35,11 +35,19 @@ class ResultsViewModel @Inject constructor(
     private val _state = MutableStateFlow<ResultsUiState>(ResultsUiState.Loading)
     val state: StateFlow<ResultsUiState> = _state.asStateFlow()
 
-    fun planJourney(originLat: Double, originLng: Double, destLat: Double, destLng: Double) {
+    fun planJourney(
+        originLat: Double,
+        originLng: Double,
+        destLat: Double,
+        destLng: Double,
+        departAtEpochSec: Long? = null,
+    ) {
         viewModelScope.launch {
             _state.value = ResultsUiState.Loading
 
-            val result = repository.planJourney(originLat, originLng, destLat, destLng)
+            val result = repository.planJourney(
+                originLat, originLng, destLat, destLng, departAtEpochSec
+            )
 
             result.onSuccess { response ->
                 if (response.journeys.isEmpty()) {

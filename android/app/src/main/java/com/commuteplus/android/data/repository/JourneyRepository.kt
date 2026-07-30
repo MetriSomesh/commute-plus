@@ -34,6 +34,7 @@ class JourneyRepository @Inject constructor(
             val response = api.searchPlaces(query, locale)
             Result.success(response.places)
         } catch (e: Exception) {
+            android.util.Log.e("CommutePlusNet", "searchPlaces('$query') failed: ${e.javaClass.simpleName}: ${e.message}", e)
             Result.failure(e)
         }
     }

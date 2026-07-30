@@ -8,6 +8,7 @@
     <string name="search_to">ಅಲ್ಲಿಗೆ</string>
     <string name="search_go">ಮಾರ್ಗಗಳನ್ನು ತೋರಿಸಿ</string>
     <string name="use_my_location">ನನ್ನ ಸ್ಥಳ ಬಳಸಿ</string>
+    <string name="search_depart">ಪ್ರಯಾಣ</string>
 
     <!-- Results screen -->
     <string name="results_title">ಮಾರ್ಗಗಳು</string>

@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.22"
     id("com.google.dagger.hilt.android")
     kotlin("kapt")
 }
@@ -48,8 +49,11 @@ android {
 }
 
 dependencies {
-    // Compose BOM
-    val composeBom = platform("androidx.compose:compose-bom:2024.01.00")
+    // Compose BOM. 2024.02.00 => Compose 1.6.x / material3 1.2.0, which aligns with the
+    // animation-core 1.6.x that lifecycle-viewmodel-compose 2.7.0 pulls in. Using the older
+    // 2024.01.00 (material3 1.1.2 / animation-core 1.5.4) caused a runtime NoSuchMethodError
+    // (KeyframesSpecConfig.at) because Gradle resolved a newer animation-core than material3 expected.
+    val composeBom = platform("androidx.compose:compose-bom:2024.02.00")
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")

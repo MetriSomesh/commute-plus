@@ -8,6 +8,7 @@
     <string name="search_to">कहाँ तक</string>
     <string name="search_go">रास्ते दिखाएं</string>
     <string name="use_my_location">मेरा स्थान उपयोग करें</string>
+    <string name="search_depart">प्रस्थान</string>
 
     <!-- Results screen -->
     <string name="results_title">रास्ते</string>

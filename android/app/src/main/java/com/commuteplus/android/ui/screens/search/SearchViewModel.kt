@@ -23,9 +23,32 @@ data class SearchState(
     val selectedDestination: PlaceDto? = null,
     val activeField: ActiveField = ActiveField.NONE,
     val isSearching: Boolean = false,
+    val departure: DeparturePreset = DeparturePreset.NOW,
 )
 
 enum class ActiveField { ORIGIN, DESTINATION, NONE }
+
+/**
+ * When to depart. "Now" leaves the time unset (backend uses current time). The fixed-hour presets
+ * resolve to the next occurrence of that hour in India time — useful because buses/metro only run
+ * during service hours, and a traveler often plans ahead. A full date/time picker is a fast-follow.
+ */
+enum class DeparturePreset(val label: String, val hour: Int?) {
+    NOW("Now", null),
+    MORNING("9 AM", 9),
+    NOON("12 PM", 12),
+    EVENING("6 PM", 18);
+
+    /** Resolve to epoch seconds, or null for NOW. Picks today if the hour is still ahead, else tomorrow. */
+    fun toEpochSeconds(): Long? {
+        val h = hour ?: return null
+        val ist = java.time.ZoneId.of("Asia/Kolkata")
+        val now = java.time.ZonedDateTime.now(ist)
+        var target = now.withHour(h).withMinute(0).withSecond(0).withNano(0)
+        if (!target.isAfter(now)) target = target.plusDays(1)
+        return target.toEpochSecond()
+    }
+}
 
 /**
  * Search screen ViewModel. Debounces autocomplete queries (300ms), calls real Photon geocoder.
@@ -40,6 +63,10 @@ class SearchViewModel @Inject constructor(
     val state: StateFlow<SearchState> = _state.asStateFlow()
 
     private var searchJob: Job? = null
+
+    fun onDepartureSelected(preset: DeparturePreset) {
+        _state.update { it.copy(departure = preset) }
+    }
 
     fun onOriginQueryChanged(query: String) {
         _state.update {

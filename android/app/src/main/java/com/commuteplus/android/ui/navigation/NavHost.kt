@@ -28,21 +28,24 @@ fun CommutePlusNavHost() {
     NavHost(navController = navController, startDestination = "search") {
         composable("search") {
             SearchScreen(
-                onPlanJourney = { originLat, originLng, destLat, destLng ->
+                onPlanJourney = { originLat, originLng, destLat, destLng, departAt ->
+                    // departAt is epoch seconds, or "now" when no time was chosen.
+                    val dep = departAt?.toString() ?: "now"
                     navController.navigate(
-                        "results/$originLat/$originLng/$destLat/$destLng"
+                        "results/$originLat/$originLng/$destLat/$destLng/$dep"
                     )
                 }
             )
         }
 
         composable(
-            route = "results/{originLat}/{originLng}/{destLat}/{destLng}",
+            route = "results/{originLat}/{originLng}/{destLat}/{destLng}/{departAt}",
             arguments = listOf(
                 navArgument("originLat") { type = NavType.StringType },
                 navArgument("originLng") { type = NavType.StringType },
                 navArgument("destLat") { type = NavType.StringType },
                 navArgument("destLng") { type = NavType.StringType },
+                navArgument("departAt") { type = NavType.StringType },
             )
         ) { backStackEntry ->
             val args = backStackEntry.arguments
@@ -51,6 +54,7 @@ fun CommutePlusNavHost() {
                 originLng = args?.getString("originLng")?.toDoubleOrNull() ?: 0.0,
                 destLat = args?.getString("destLat")?.toDoubleOrNull() ?: 0.0,
                 destLng = args?.getString("destLng")?.toDoubleOrNull() ?: 0.0,
+                departAtEpochSec = args?.getString("departAt")?.toLongOrNull(),
                 onJourneySelected = { journeyIndex ->
                     navController.navigate("detail/$journeyIndex")
                 },

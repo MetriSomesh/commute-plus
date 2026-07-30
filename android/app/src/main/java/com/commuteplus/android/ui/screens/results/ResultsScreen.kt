@@ -34,6 +34,7 @@ fun ResultsScreen(
     originLng: Double,
     destLat: Double,
     destLng: Double,
+    departAtEpochSec: Long?,
     onJourneySelected: (Int) -> Unit,
     onBack: () -> Unit,
     viewModel: ResultsViewModel = hiltViewModel(),
@@ -41,8 +42,8 @@ fun ResultsScreen(
     val state by viewModel.state.collectAsState()
 
     // Trigger planning on first composition
-    LaunchedEffect(originLat, originLng, destLat, destLng) {
-        viewModel.planJourney(originLat, originLng, destLat, destLng)
+    LaunchedEffect(originLat, originLng, destLat, destLng, departAtEpochSec) {
+        viewModel.planJourney(originLat, originLng, destLat, destLng, departAtEpochSec)
     }
 
     Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {

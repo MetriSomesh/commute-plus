@@ -35,7 +35,7 @@ import com.commuteplus.android.data.api.PlaceDto
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
-    onPlanJourney: (originLat: Double, originLng: Double, destLat: Double, destLng: Double) -> Unit,
+    onPlanJourney: (originLat: Double, originLng: Double, destLat: Double, destLng: Double, departAtEpochSec: Long?) -> Unit,
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -116,6 +116,25 @@ fun SearchScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // --- Departure time presets ---
+        Text(
+            text = stringResource(R.string.search_depart),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            DeparturePreset.entries.forEach { preset ->
+                FilterChip(
+                    selected = state.departure == preset,
+                    onClick = { viewModel.onDepartureSelected(preset) },
+                    label = { Text(preset.label, style = MaterialTheme.typography.labelMedium) },
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         // --- Autocomplete suggestions ---
         if (state.suggestions.isNotEmpty()) {
             Divider(color = MaterialTheme.colorScheme.outline)
@@ -139,7 +158,7 @@ fun SearchScreen(
                 val origin = state.selectedOrigin
                 val dest = state.selectedDestination
                 if (origin != null && dest != null) {
-                    onPlanJourney(origin.lat, origin.lng, dest.lat, dest.lng)
+                    onPlanJourney(origin.lat, origin.lng, dest.lat, dest.lng, state.departure.toEpochSeconds())
                 }
             },
             enabled = state.selectedOrigin != null && state.selectedDestination != null,

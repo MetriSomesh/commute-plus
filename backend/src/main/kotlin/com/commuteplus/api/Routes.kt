@@ -9,7 +9,10 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.slf4j.LoggerFactory
 import java.time.Instant
+
+private val routeLog = LoggerFactory.getLogger("CommutePlusRoutes")
 
 /**
  * HTTP API routes for Commute+.
@@ -36,6 +39,7 @@ fun Route.journeyRoutes(
             val query = call.request.queryParameters["q"]
             val locale = call.request.queryParameters["locale"] ?: "en"
             val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 8
+            routeLog.info("GET /search q='$query' from ${call.request.local.remoteHost}")
 
             if (query.isNullOrBlank()) {
                 call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing 'q' parameter"))
