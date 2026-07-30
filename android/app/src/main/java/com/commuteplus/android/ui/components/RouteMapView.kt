@@ -17,8 +17,16 @@ import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color as AndroidColor
+import android.graphics.Paint
+import android.graphics.Path
+import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
@@ -95,46 +103,140 @@ fun RouteMapView(
 
 private fun drawJourney(style: Style, map: MapLibreMap, journey: JourneyDto) {
     val allPoints = mutableListOf<LatLng>()
+    val legPointLists = mutableListOf<List<Point>>()
 
+    // 1) Draw each leg: a white casing underneath + the mode-colored line on top, so the route
+    //    stands out clearly against the basemap.
     journey.legs.forEachIndexed { index, leg ->
-        // Prefer the leg's real path geometry (road/rail). Fall back to a straight stop-to-stop
-        // line only when the backend didn't provide an encoded polyline.
         val points: List<Point> = decodePolyline(leg.geometry).ifEmpty {
             listOf(
                 Point.fromLngLat(leg.from.lng, leg.from.lat),
                 Point.fromLngLat(leg.to.lng, leg.to.lat),
             )
         }
+        legPointLists.add(points)
         val line = LineString.fromLngLats(points)
+        val isWalk = leg.mode.equals("WALK", ignoreCase = true)
+        val colorInt = modeColor(leg.mode).toArgbInt()
 
         val sourceId = "leg-source-$index"
-        val layerId = "leg-layer-$index"
+        style.addSource(GeoJsonSource(sourceId, FeatureCollection.fromFeature(Feature.fromGeometry(line))))
 
-        if (style.getSource(sourceId) == null) {
-            style.addSource(GeoJsonSource(sourceId, FeatureCollection.fromFeature(Feature.fromGeometry(line))))
-
-            val isWalk = leg.mode.equals("WALK", ignoreCase = true)
-            val colorInt = modeColor(leg.mode).toArgbInt()
-
-            val layer = LineLayer(layerId, sourceId).withProperties(
-                PropertyFactory.lineColor(colorInt),
-                PropertyFactory.lineWidth(if (isWalk) 3f else 5f),
-                PropertyFactory.lineCap(org.maplibre.android.style.layers.Property.LINE_CAP_ROUND),
-                PropertyFactory.lineJoin(org.maplibre.android.style.layers.Property.LINE_JOIN_ROUND),
-                PropertyFactory.lineDasharray(if (isWalk) arrayOf(2f, 2f) else arrayOf(1f)),
+        // White casing (skip for walk dashes, where it would look muddy).
+        if (!isWalk) {
+            style.addLayer(
+                LineLayer("leg-casing-$index", sourceId).withProperties(
+                    PropertyFactory.lineColor(AndroidColor.WHITE),
+                    PropertyFactory.lineWidth(9f),
+                    PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+                    PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
+                )
             )
-            style.addLayer(layer)
         }
+        style.addLayer(
+            LineLayer("leg-line-$index", sourceId).withProperties(
+                PropertyFactory.lineColor(colorInt),
+                PropertyFactory.lineWidth(if (isWalk) 4f else 6f),
+                PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+                PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
+                PropertyFactory.lineDasharray(if (isWalk) arrayOf(1.5f, 1.5f) else arrayOf(1f)),
+            )
+        )
 
         points.forEach { allPoints.add(LatLng(it.latitude(), it.longitude())) }
     }
 
+    // 2) Stop dots at each transit board/alight point (white fill, mode-colored ring).
+    val stopFeatures = mutableListOf<Feature>()
+    journey.legs.forEach { leg ->
+        if (!leg.mode.equals("WALK", ignoreCase = true)) {
+            stopFeatures.add(pointFeature(leg.from.lng, leg.from.lat))
+            stopFeatures.add(pointFeature(leg.to.lng, leg.to.lat))
+        }
+    }
+    if (stopFeatures.isNotEmpty()) {
+        style.addSource(GeoJsonSource("stops-source", FeatureCollection.fromFeatures(stopFeatures)))
+        style.addLayer(
+            CircleLayer("stops-layer", "stops-source").withProperties(
+                PropertyFactory.circleRadius(5f),
+                PropertyFactory.circleColor(AndroidColor.WHITE),
+                PropertyFactory.circleStrokeColor(AndroidColor.parseColor("#0D7377")),
+                PropertyFactory.circleStrokeWidth(3f),
+            )
+        )
+    }
+
+    // 3) Origin + destination pins (from = green, to = red), anchored at the true endpoints.
+    val originPt = legPointLists.firstOrNull()?.firstOrNull()
+    val destPt = legPointLists.lastOrNull()?.lastOrNull()
+    style.addImage("pin-origin", pinBitmap(AndroidColor.parseColor("#0D7377")))
+    style.addImage("pin-dest", pinBitmap(AndroidColor.parseColor("#C62828")))
+    if (originPt != null) {
+        style.addSource(GeoJsonSource("origin-source", FeatureCollection.fromFeature(Feature.fromGeometry(originPt))))
+        style.addLayer(pinLayer("origin-layer", "origin-source", "pin-origin"))
+    }
+    if (destPt != null) {
+        style.addSource(GeoJsonSource("dest-source", FeatureCollection.fromFeature(Feature.fromGeometry(destPt))))
+        style.addLayer(pinLayer("dest-layer", "dest-source", "pin-dest"))
+    }
+
+    // 4) Fit the camera to the whole route (with padding for the pins).
     if (allPoints.size >= 2) {
         val bounds = LatLngBounds.Builder().includes(allPoints).build()
-        map.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 80))
+        map.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 110))
     } else if (allPoints.isNotEmpty()) {
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(allPoints.first(), 14.0))
     }
+}
+
+private fun pointFeature(lng: Double, lat: Double): Feature =
+    Feature.fromGeometry(Point.fromLngLat(lng, lat))
+
+private fun pinLayer(id: String, sourceId: String, imageId: String): SymbolLayer =
+    SymbolLayer(id, sourceId).withProperties(
+        PropertyFactory.iconImage(imageId),
+        PropertyFactory.iconAnchor(Property.ICON_ANCHOR_BOTTOM),
+        PropertyFactory.iconAllowOverlap(true),
+        PropertyFactory.iconIgnorePlacement(true),
+    )
+
+/** Draw a simple teardrop map pin of the given color with a white inner dot. */
+private fun pinBitmap(color: Int): Bitmap {
+    val w = 54
+    val h = 72
+    val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bmp)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    val cx = w / 2f
+    val cy = w / 2f
+    val r = w / 2f - 4f
+
+    // White outline (draw the pin slightly larger in white first).
+    paint.color = AndroidColor.WHITE
+    canvas.drawCircle(cx, cy, r + 2f, paint)
+    val outlinePath = Path().apply {
+        moveTo(cx - (r + 2f) * 0.62f, cy + (r + 2f) * 0.45f)
+        lineTo(cx + (r + 2f) * 0.62f, cy + (r + 2f) * 0.45f)
+        lineTo(cx, h.toFloat())
+        close()
+    }
+    canvas.drawPath(outlinePath, paint)
+
+    // Colored body.
+    paint.color = color
+    canvas.drawCircle(cx, cy, r, paint)
+    val bodyPath = Path().apply {
+        moveTo(cx - r * 0.6f, cy + r * 0.45f)
+        lineTo(cx + r * 0.6f, cy + r * 0.45f)
+        lineTo(cx, h.toFloat() - 3f)
+        close()
+    }
+    canvas.drawPath(bodyPath, paint)
+
+    // White inner dot.
+    paint.color = AndroidColor.WHITE
+    canvas.drawCircle(cx, cy, r * 0.42f, paint)
+    return bmp
 }
 
 /**
