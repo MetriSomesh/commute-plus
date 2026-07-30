@@ -32,11 +32,14 @@ import org.maplibre.geojson.Point
  * (Leg geometry from the backend is stop-to-stop, so segments are straight lines between stops —
  * accurate endpoints, approximate path. Full shape geometry can be added when the API exposes it.)
  *
- * Tiles: set STYLE_URL to a Protomaps/self-hosted style for production. The MapLibre demo style
- * is used as a no-account default for development. No API key required.
+ * Basemap: OpenFreeMap (https://openfreemap.org) — free, no API key, no signup, full street-level
+ * OSM vector tiles + styles. The "positron" style is a light, neutral canvas so the colored route
+ * lines stand out (per the UI taste spec). Swap to a self-hosted Protomaps/OpenFreeMap instance for
+ * production scale. The previous MapLibre demo style only had low-zoom world outlines (no streets),
+ * which rendered as a blank fill at city zoom.
  */
 
-private const val STYLE_URL = "https://demotiles.maplibre.org/style.json"
+private const val STYLE_URL = "https://tiles.openfreemap.org/styles/positron"
 
 @Composable
 fun RouteMapView(
