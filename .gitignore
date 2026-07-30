@@ -1,0 +1,32 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Gradle
+.gradle/
+build/
+local.properties
+
+# Android
+android/app/release/
+android/.cxx/
+*.apk
+*.aab
+
+# Backend
+backend/build/
+backend/data/*.pbf
+backend/data/*.zip
+backend/data/graph/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets / local config
+*.env
+secrets/
+
+# Kiro local
+.kiro/
