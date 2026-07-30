@@ -35,3 +35,6 @@ secrets/
 
 # Kiro local
 .kiro/
+
+# Ad-hoc test screenshots dropped in the repo root (docs/screenshots/ is tracked)
+/*.png
