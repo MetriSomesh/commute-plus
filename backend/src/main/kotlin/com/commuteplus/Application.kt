@@ -46,7 +46,12 @@ fun main() {
     // 2. OpenTripPlanner — real transit routing, called over HTTP (OTP runs as a separate process)
     val otpUrl = System.getenv("OTP_GRAPHQL_URL")
         ?: "http://localhost:8080/otp/routers/default/index/graphql"
-    val otpRouter = OtpRouterService(otpGraphQlUrl = otpUrl, httpClient = httpClient)
+    val fareRepository = com.commuteplus.fare.GtfsFareRepository(dataDir)
+    val otpRouter = OtpRouterService(
+        otpGraphQlUrl = otpUrl,
+        httpClient = httpClient,
+        fareRepository = fareRepository,
+    )
 
     // 3. Photon geocoder — real OSM-based place search
     val photonUrl = System.getenv("PHOTON_URL") ?: "https://photon.komoot.io"

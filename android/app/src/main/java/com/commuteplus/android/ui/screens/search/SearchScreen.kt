@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.outlined.TripOrigin
@@ -23,6 +24,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.commuteplus.android.R
 import com.commuteplus.android.data.api.PlaceDto
+import com.commuteplus.android.data.local.RecentSearchEntity
 
 /**
  * Search screen — two fields (from/to) with debounced autocomplete.
@@ -135,7 +137,7 @@ fun SearchScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- Autocomplete suggestions ---
+        // --- Autocomplete suggestions, or recent trips when not searching ---
         if (state.suggestions.isNotEmpty()) {
             Divider(color = MaterialTheme.colorScheme.outline)
             LazyColumn(
@@ -145,6 +147,27 @@ fun SearchScreen(
                     PlaceSuggestionItem(
                         place = place,
                         onClick = { viewModel.onPlaceSelected(place) },
+                    )
+                }
+            }
+        } else if (state.recents.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.search_recent),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
+                items(state.recents) { recent ->
+                    RecentSearchItem(
+                        recent = recent,
+                        onClick = {
+                            onPlanJourney(
+                                recent.originLat, recent.originLng,
+                                recent.destinationLat, recent.destinationLng,
+                                state.departure.toEpochSeconds(),
+                            )
+                        },
                     )
                 }
             }
@@ -158,6 +181,7 @@ fun SearchScreen(
                 val origin = state.selectedOrigin
                 val dest = state.selectedDestination
                 if (origin != null && dest != null) {
+                    viewModel.saveCurrentAsRecent()
                     onPlanJourney(origin.lat, origin.lng, dest.lat, dest.lng, state.departure.toEpochSeconds())
                 }
             },
@@ -220,6 +244,35 @@ private fun PlaceSuggestionItem(
             text = place.name,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@Composable
+private fun RecentSearchItem(
+    recent: RecentSearchEntity,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Filled.History,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = "${recent.originName}  →  ${recent.destinationName}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
         )
     }
 }

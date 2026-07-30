@@ -9,6 +9,7 @@
     <string name="search_go">Show routes</string>
     <string name="use_my_location">Use my location</string>
     <string name="search_depart">Depart</string>
+    <string name="search_recent">Recent trips</string>
 
     <!-- Results screen -->
     <string name="results_title">Routes</string>

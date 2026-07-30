@@ -27,6 +27,7 @@ import java.time.Instant
 class OtpRouterService(
     private val otpGraphQlUrl: String,
     private val httpClient: HttpClient,
+    private val fareRepository: com.commuteplus.fare.GtfsFareRepository? = null,
 ) {
     private val log = LoggerFactory.getLogger(OtpRouterService::class.java)
     private val json = Json { ignoreUnknownKeys = true }
@@ -93,8 +94,8 @@ class OtpRouterService(
                     endTime
                     route { shortName longName }
                     trip { tripHeadsign }
-                    from { name lat lon }
-                    to { name lat lon }
+                    from { name lat lon stop { gtfsId zoneId } }
+                    to { name lat lon stop { gtfsId zoneId } }
                     intermediateStops { name }
                     legGeometry { points }
                   }
@@ -130,14 +131,22 @@ class OtpRouterService(
 
             val totalDurationSec = itinObj["duration"].lng() ?: 0L
             val walkDistance = itinObj["walkDistance"].dbl() ?: 0.0
-            val transitLegs = legs.count { it.mode != TravelMode.WALK }
+            val transitLegsList = legs.filter { it.mode != TravelMode.WALK }
+            val transitLegs = transitLegsList.size
+
+            // Sum the published fares of the transit legs. Only show a total when every transit leg
+            // has a known fare — otherwise a partial sum would be misleading (fall back to null).
+            val totalFare = if (transitLegsList.isNotEmpty() && transitLegsList.all { it.fare != null }) {
+                val sum = transitLegsList.sumOf { it.fare!!.minRupees }
+                Fare(minRupees = sum, maxRupees = sum, estimated = false)
+            } else null
 
             Journey(
                 legs = legs,
                 totalDuration = Duration.ofSeconds(totalDurationSec),
                 totalWalkMeters = walkDistance.toInt(),
                 transfers = (transitLegs - 1).coerceAtLeast(0),
-                totalFare = null, // OTP feeds rarely include reliable BMTC fares; shown as unavailable
+                totalFare = totalFare,
                 primaryMode = legs.firstOrNull { it.mode != TravelMode.WALK }?.mode
                     ?: TravelMode.WALK,
             )
@@ -168,6 +177,19 @@ class OtpRouterService(
         // OTP's legGeometry.points is a Google-encoded polyline (precision 5) along the real path.
         val geometry = leg["legGeometry"].obj()?.get("points").str()
 
+        // Real published fare for this transit leg, looked up from the feed's GTFS fare data by
+        // the boarding/alighting stop zones. gtfsId is "feedId:stopId" (e.g., "bmtc:35103").
+        val fromStop = fromObj?.get("stop").obj()
+        val toStop = toObj["stop"].obj()
+        val feedId = fromStop?.get("gtfsId").str()?.substringBefore(":")
+        val fromZone = fromStop?.get("zoneId").str()
+        val toZone = toStop?.get("zoneId").str()
+        val legFare = if (mode != TravelMode.WALK) {
+            fareRepository?.fare(feedId, fromZone, toZone)?.let {
+                Fare(minRupees = it, maxRupees = it, estimated = false)
+            }
+        } else null
+
         return JourneyLeg(
             mode = mode,
             from = Place(id = "otp:from", name = fromName, location = LatLng(fromLat, fromLon)),
@@ -179,7 +201,7 @@ class OtpRouterService(
             routeName = routeName,
             headsign = headsign,
             numStops = numStops,
-            fare = null,
+            fare = legFare,
             geometry = geometry,
         )
     }

@@ -3,6 +3,7 @@ package com.commuteplus.android.ui.screens.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.commuteplus.android.data.api.PlaceDto
+import com.commuteplus.android.data.local.RecentSearchEntity
 import com.commuteplus.android.data.repository.JourneyRepository
 import com.commuteplus.android.util.LocationProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,6 +25,7 @@ data class SearchState(
     val activeField: ActiveField = ActiveField.NONE,
     val isSearching: Boolean = false,
     val departure: DeparturePreset = DeparturePreset.NOW,
+    val recents: List<RecentSearchEntity> = emptyList(),
 )
 
 enum class ActiveField { ORIGIN, DESTINATION, NONE }
@@ -63,6 +65,33 @@ class SearchViewModel @Inject constructor(
     val state: StateFlow<SearchState> = _state.asStateFlow()
 
     private var searchJob: Job? = null
+
+    init {
+        loadRecents()
+    }
+
+    private fun loadRecents() {
+        viewModelScope.launch {
+            _state.update { it.copy(recents = repository.getRecentSearches()) }
+        }
+    }
+
+    /** Persist the current origin/destination as a recent trip (called when a search is run). */
+    fun saveCurrentAsRecent() {
+        val origin = _state.value.selectedOrigin ?: return
+        val dest = _state.value.selectedDestination ?: return
+        viewModelScope.launch {
+            repository.saveRecentSearch(
+                originName = origin.name,
+                originLat = origin.lat,
+                originLng = origin.lng,
+                destName = dest.name,
+                destLat = dest.lat,
+                destLng = dest.lng,
+            )
+            loadRecents()
+        }
+    }
 
     fun onDepartureSelected(preset: DeparturePreset) {
         _state.update { it.copy(departure = preset) }
